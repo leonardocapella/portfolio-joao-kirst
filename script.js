@@ -48,6 +48,7 @@ const FEED = [
   ['social', 'Grupo Tedeschi', 1], ['social', 'Triunfo Ice', 9],
 ];
 const PF = window.PORTFOLIO || {};
+const th = src => src.replace('assets/', 'assets/th/'); // miniatura leve (640px)
 FEED.forEach(([cat, client, i]) => {
   const c = (PF[cat] || { projects: [] }).projects.findIndex(p => p.client === client);
   if (c < 0) return;
@@ -56,7 +57,7 @@ FEED.forEach(([cat, client, i]) => {
   fig.className = 'hs-item';
   fig.tabIndex = 0;
   fig.style.aspectRatio = `${it.w} / ${it.h}`;
-  fig.innerHTML = `<img src="${it.src}" alt="${client}: ${it.tag}" loading="lazy"><figcaption><strong>${client}</strong>${PF[cat].label}</figcaption>`;
+  fig.innerHTML = `<img src="${th(it.src)}" alt="${client}: ${it.tag}" loading="lazy"><figcaption><strong>${client}</strong>${PF[cat].label}</figcaption>`;
   const open = () => openLb(cat, c, PF[cat].projects[c].items.indexOf(it));
   fig.addEventListener('click', open);
   fig.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
@@ -112,81 +113,195 @@ const manifesto = $('#manifesto-text');
 const words = $$('.w', manifesto);
 
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+
+/* ------------------------------------------------------------
+   Desempenho: todas as medidas (posições, alturas) são lidas UMA vez
+   em measure(), no carregamento e quando o layout muda de tamanho.
+   O frame de scroll só faz contas e escreve transform/opacity,
+   sem ler o layout (evita o navegador recalcular a página a cada frame).
+------------------------------------------------------------ */
+const docTop = el => { let t = 0; while (el) { t += el.offsetTop; el = el.offsetParent; } return t; };
+const M = {};
+const marqueeEl = $('.marquee');
+const heroCopy = $('.hero-copy');
+const heroMedia = $('.hero-media');
+const heroCue = $('.hero-cue');
+const hmCaption = $('.hm-caption');
+const rsCopy = $('.rs-copy');
+const rsEnd = $('.rs-end');
+const rsMain = $('.rs-main');
+const rsL = $('.rs-l');
+const rsR = $('.rs-r');
+
+// efeitos por elemento data-sp: recebem o progresso (0 entrando por baixo, 1 saindo por cima)
+const spFx = spEls.map(el => {
+  const k = v => clamp(v * 2.6); // chega a 1 quando o elemento está ~40% para dentro da tela
+  if (el.classList.contains('sobre-photo')) {
+    const img = $('img', el);
+    return { el, fn: sp => {
+      const i = k(sp);
+      el.style.transform = `translate3d(0,${((1 - i) * 50).toFixed(1)}px,0) scale(${(0.9 + 0.1 * i).toFixed(4)})`;
+      img.style.transform = `scale(${(1.28 - 0.22 * i).toFixed(4)}) translate3d(0,${((sp - 0.5) * -36).toFixed(1)}px,0)`;
+    } };
+  }
+  if (el.classList.contains('numeros')) {
+    const nums = $$('.numero', el);
+    return { el, fn: sp => {
+      const i = k(sp);
+      nums.forEach((n, j) => { n.style.transform = `translate3d(0,${((1 - i) * (60 + 50 * j)).toFixed(1)}px,0) scale(${(0.88 + 0.12 * i).toFixed(4)})`; });
+    } };
+  }
+  const l = $('.drift-l', el), r = $('.drift-r', el);
+  return { el, fn: sp => {
+    const d = ((1 - k(sp)) * 90).toFixed(1);
+    if (l) l.style.transform = `translate3d(-${d}px,0,0)`;
+    if (r) r.style.transform = `translate3d(${d}px,0,0)`;
+  } };
+});
+
 let ticking = false;
+let last = {};
+let rsNear = false, rsP = 0, scrolling = false, idleT;
+const rsVids = [[rsMain, 'main'], [rsL, 'side'], [rsR, 'side']].map(([el, k]) => [$('video', el), k]);
+function updateReels() {
+  const sides = M.vw > 760;
+  rsVids.forEach(([v, k]) => {
+    // laterais só tocam com a rolagem parada: três vídeos decodificando junto travam o scroll
+    const want = rsNear && (k === 'main' || (sides && rsP > 0.12 && !scrolling));
+    if (want && !v.src) v.src = v.dataset.src;
+    if (want && v.paused) v.play().catch(() => {});
+    else if (!want && !v.paused) v.pause();
+  });
+}
+// só escreve no DOM quando o valor muda
+const set = (key, el, prop, val) => { if (last[key] !== val) { last[key] = val; el.style[prop] = val; } };
+const vis = (top, h, y) => top + h > y - 50 && top < y + M.vh + 50;
+
+function measure() {
+  const vw = innerWidth, vh = innerHeight, mob = vw <= 640;
+  M.vw = vw; M.vh = vh;
+  M.max = document.documentElement.scrollHeight - vh;
+  M.heroH = hero.offsetHeight;
+  // janela inicial do hero
+  M.t0 = mob ? clamp(vh * 0.6, 390, 460) : clamp(vh * 0.52, 360, 440);
+  M.w0 = mob ? vw - 32 : Math.min(1040, vw - 48);
+  M.procTop = docTop(processEl); M.procH = processEl.offsetHeight;
+  M.steps = steps.map(docTop);
+  M.manTop = docTop(manifesto); M.manH = manifesto.offsetHeight;
+  M.feedTop = docTop(feed); M.feedH = feed.offsetHeight;
+  M.hsDist = Math.max(0, hsTrack.scrollWidth - vw);
+  M.hsItems = hsItems.map(el => [el.offsetLeft + el.offsetWidth / 2, el]);
+  M.rsTop = docTop(rshow); M.rsH = rshow.offsetHeight;
+  M.rsT0 = mob ? clamp(vh * 0.28, 190, 250) : clamp(vh * 0.32, 200, 290);
+  M.sp = spFx.map(f => [docTop(f.el), f.el.offsetHeight]);
+  M.cards = catCards.map(c => [docTop(c), c.offsetHeight]);
+  M.third = track.scrollWidth / 3;
+  M.marqTop = docTop(marqueeEl); M.marqH = marqueeEl.offsetHeight;
+  last = {};
+  onScroll();
+}
 
 function onScroll() {
-  const y = scrollY;
-  const vh = innerHeight;
-  const max = document.documentElement.scrollHeight - vh;
+  ticking = false;
+  const y = scrollY, vh = M.vh, vw = M.vw;
 
   nav.classList.toggle('scrolled', y > 20);
-  progress.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
-  waFloat.classList.toggle('show', y > hero.offsetHeight - vh * 0.5);
+  set('prog', progress, 'transform', `scaleX(${M.max > 0 ? (y / M.max).toFixed(4) : 0})`);
+  waFloat.classList.toggle('show', y > M.heroH - vh * 0.5);
 
-  // Hero: 0 → 1 enquanto o palco está fixo
-  const range = hero.offsetHeight - vh;
-  const p = clamp(y / (range * 0.85));
-  heroStage.style.setProperty('--p', p.toFixed(4));
+  // HERO: a janela (clip-path) abre até a tela cheia; as imagens não mudam de tamanho
+  if (y < M.heroH) {
+    const p = clamp(y / ((M.heroH - vh) * 0.85));
+    const top = M.t0 * (1 - p), side = ((vw - M.w0) / 2) * (1 - p), rad = (22 * (1 - p)).toFixed(1);
+    set('hm', heroMedia, 'clipPath', `inset(${top.toFixed(1)}px ${side.toFixed(1)}px 0px round ${rad}px ${rad}px 0px 0px)`);
+    set('hc', heroCopy, 'transform', `translate3d(0,${(p * -70).toFixed(1)}px,0)`);
+    set('hco', heroCopy, 'opacity', clamp(1 - p * 1.8).toFixed(3));
+    set('cue', heroCue, 'opacity', clamp(1 - p * 3).toFixed(3));
+    set('cap', hmCaption, 'opacity', clamp((p - 0.6) * 2.5).toFixed(3));
+    set('capt', hmCaption, 'transform', `translate3d(0,${((1 - p) * 30).toFixed(1)}px,0)`);
+    heroStage.classList.toggle('moving', p > 0.02);
+  }
+  heroStage.classList.toggle('off', y > M.heroH);
+  marqueeEl.classList.toggle('off', !vis(M.marqTop, M.marqH, y));
 
-  // Processo: linha preenche conforme a seção passa pelo centro da tela
-  const r = processEl.getBoundingClientRect();
-  const pp = clamp((vh * 0.6 - r.top) / r.height);
-  processFill.style.transform = `scaleY(${pp})`;
-  steps.forEach(s => s.classList.toggle('on', s.getBoundingClientRect().top < vh * 0.6));
+  // Processo
+  if (vis(M.procTop, M.procH, y)) {
+    set('proc', processFill, 'transform', `scaleY(${clamp((y + vh * 0.6 - M.procTop) / M.procH).toFixed(4)})`);
+    steps.forEach((s, i) => s.classList.toggle('on', M.steps[i] - y < vh * 0.6));
+  }
 
   // Manifesto
-  const mr = manifesto.getBoundingClientRect();
-  const mp = clamp((vh * 0.85 - mr.top) / (mr.height + vh * 0.35));
-  const lit = Math.round(mp * words.length);
-  words.forEach((w, i) => w.classList.toggle('on', i < lit));
+  if (vis(M.manTop, M.manH, y)) {
+    const lit = Math.round(clamp((vh * 0.85 - (M.manTop - y)) / (M.manH + vh * 0.35)) * words.length);
+    if (last.lit !== lit) { last.lit = lit; words.forEach((w, i) => w.classList.toggle('on', i < lit)); }
+  }
 
   // Feed horizontal: a rolagem vertical vira deslocamento lateral
-  const fTop = feed.offsetTop, fRange = feed.offsetHeight - vh;
-  if (y > fTop - vh && y < fTop + feed.offsetHeight) {
-    const fp = clamp((y - fTop) / fRange);
-    const dist = Math.max(0, hsTrack.scrollWidth - innerWidth);
-    hsTrack.style.transform = `translate3d(${-fp * dist}px,0,0)`;
-    hsBar.style.transform = `scaleX(${fp})`;
-    hsItems.forEach((el, i) => {
-      const r2 = el.getBoundingClientRect();
-      const c = (r2.left + r2.width / 2) / innerWidth - 0.5; // -0.5 (esq) … 0.5 (dir)
-      el.style.setProperty('--lift', (Math.abs(c) * 50 * (i % 2 ? 1 : -1)).toFixed(1));
-      el.style.setProperty('--tilt', (c * -4).toFixed(2));
-      el.style.setProperty('--px', (c * -30).toFixed(1));
+  if (vis(M.feedTop, M.feedH, y)) {
+    const fp = clamp((y - M.feedTop) / (M.feedH - vh));
+    const shift = fp * M.hsDist;
+    set('hs', hsTrack, 'transform', `translate3d(${(-shift).toFixed(1)}px,0,0)`);
+    set('hsb', hsBar, 'transform', `scaleX(${fp.toFixed(4)})`);
+    M.hsItems.forEach(([cx, el], i) => {
+      const c = (cx - shift) / vw - 0.5; // -0.5 (esquerda) a 0.5 (direita)
+      if (c < -1 || c > 1) return;
+      set('hi' + i, el, 'transform', `translate3d(0,${(Math.abs(c) * 50 * (i % 2 ? 1 : -1)).toFixed(1)}px,0) rotate(${(c * -4).toFixed(2)}deg)`);
+      set('hp' + i, el.firstElementChild, 'transform', `scale(1.06) translate3d(${(c * -30).toFixed(1)}px,0,0)`);
     });
   }
 
-  // Reels: celular central cresce e os laterais entram
-  const rTop = rshow.offsetTop, rRange = rshow.offsetHeight - vh;
-  if (y > rTop - vh && y < rTop + rshow.offsetHeight) {
-    const rp = clamp((y - rTop) / (rRange * 0.8));
-    rsStage.style.setProperty('--p', rp.toFixed(4));
-    rsStage.classList.toggle('done', rp > 0.85);
+  // Reels: celulares já estão no tamanho final; crescem por scale
+  if (vis(M.rsTop, M.rsH, y)) {
+    const p = clamp((y - M.rsTop) / ((M.rsH - vh) * 0.8));
+    const s0 = ((vh - M.rsT0) * 0.9) / vh;
+    const sc = (s0 + (1 - s0) * p).toFixed(4);
+    const ty = ((M.rsT0 / 2 + (vh - M.rsT0) * 0.05) * (1 - p)).toFixed(1);
+    const sx = ((1 - p) * vw * 0.4).toFixed(1), rot = ((1 - p) * 8).toFixed(2);
+    set('rsm', rsMain, 'transform', `translate3d(0,${ty}px,0) scale(${sc})`);
+    set('rsl', rsL, 'transform', `translate3d(-${sx}px,${ty}px,0) rotate(-${rot}deg) scale(${sc})`);
+    set('rsr', rsR, 'transform', `translate3d(${sx}px,${ty}px,0) rotate(${rot}deg) scale(${sc})`);
+    const so = clamp(p * 1.6).toFixed(3);
+    set('rslo', rsL, 'opacity', so); set('rsro', rsR, 'opacity', so);
+    set('rsc', rsCopy, 'opacity', clamp(1 - p * 2.2).toFixed(3));
+    set('rsct', rsCopy, 'transform', `translate3d(0,${(p * -60).toFixed(1)}px,0)`);
+    set('rse', rsEnd, 'opacity', clamp((p - 0.7) * 3.4).toFixed(3));
+    rsStage.classList.toggle('done', p > 0.85);
+    if ((rsP > 0.12) !== (p > 0.12)) { rsP = p; updateReels(); } else rsP = p;
   }
 
-  // Elementos com data-sp: progresso 0→1 enquanto atravessam a tela
-  spEls.forEach(el => {
-    const r3 = el.getBoundingClientRect();
-    if (r3.bottom < -50 || r3.top > vh + 50) return;
-    el.style.setProperty('--sp', clamp((vh - r3.top) / (vh + r3.height)).toFixed(4));
+  // Títulos, foto e números
+  spFx.forEach((f, i) => {
+    const [top, h] = M.sp[i];
+    if (!vis(top, h, y)) return;
+    const sp = +clamp((vh - (top - y)) / (vh + h)).toFixed(3);
+    if (last['sp' + i] !== sp) { last['sp' + i] = sp; f.fn(sp); }
   });
 
-  // Leque dos cards do portfólio abre quando o card está no centro da tela
-  catCards.forEach(card => {
-    const r4 = card.getBoundingClientRect();
-    const c = (r4.top + r4.height / 2) / vh - 0.5;
-    card.style.setProperty('--f', clamp(1 - Math.abs(c) * 2.4).toFixed(3));
+  // Leque dos cards do portfólio abre quando o card passa pelo centro da tela
+  catCards.forEach((card, i) => {
+    const [top, h] = M.cards[i];
+    if (!vis(top, h, y)) return;
+    const f = clamp(1 - Math.abs((top - y + h / 2) / vh - 0.5) * 2.4).toFixed(2);
+    if (last['f' + i] !== f) { last['f' + i] = f; card.style.setProperty('--f', f); }
   });
 
   // Marquee anda um pouco mais conforme a rolagem
-  const third = track.scrollWidth / 3;
-  if (third) marqueeShift.style.transform = `translate3d(${-((y * 0.35) % third)}px,0,0)`;
-
-  ticking = false;
+  if (M.third && vis(M.marqTop, M.marqH, y)) set('mq', marqueeShift, 'transform', `translate3d(${(-((y * 0.35) % M.third)).toFixed(1)}px,0,0)`);
 }
-addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(onScroll); } }, { passive: true });
-addEventListener('resize', onScroll);
-onScroll();
+addEventListener('scroll', () => {
+  if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+  if (!scrolling) { scrolling = true; if (rsNear) updateReels(); }
+  clearTimeout(idleT);
+  idleT = setTimeout(() => { scrolling = false; if (rsNear) updateReels(); }, 200);
+}, { passive: true });
+
+// remede quando o tamanho da janela ou do conteúdo muda (fontes, accordion etc.)
+let mt;
+const remeasure = () => { clearTimeout(mt); mt = setTimeout(measure, 120); };
+addEventListener('resize', remeasure);
+new ResizeObserver(remeasure).observe(document.body);
+if (document.fonts) document.fonts.ready.then(measure);
+measure();
 
 /* ============================================================
    REVEAL + CONTADORES
@@ -286,7 +401,7 @@ function render(newClient) {
 
   if (newClient) {
     lbThumbs.innerHTML = proj.items.map((it, k) =>
-      `<button data-i="${k}" aria-label="Peça ${k + 1}"><img src="${it.t === 'video' ? it.poster : it.src}" alt="" loading="lazy"></button>`).join('');
+      `<button data-i="${k}" aria-label="Peça ${k + 1}"><img src="${th(it.t === 'video' ? it.poster : it.src)}" alt="" loading="lazy"></button>`).join('');
     $$('button', lbClients).forEach((b, k) => b.classList.toggle('active', k === state.c));
     const ab = $('button.active', lbClients);
     if (ab) ab.scrollIntoView({ block: 'nearest', inline: 'center' });
@@ -328,15 +443,9 @@ if (DATA.reels) {
   $('[data-reels-count]').textContent = DATA.reels.projects.reduce((a, p) => a + p.items.length, 0);
   $('[data-reels-brands]').textContent = DATA.reels.projects.length;
 }
-const rsVideos = $$('#reels-show video');
-new IntersectionObserver(([e]) => {
-  rsVideos.forEach(v => {
-    if (e.isIntersecting) {
-      if (!v.src) v.src = v.dataset.src;
-      if (getComputedStyle(v.parentElement).display !== 'none') v.play().catch(() => {});
-    } else v.pause();
-  });
-}, { rootMargin: '400px 0px' }).observe($('#reels-show'));
+/* Vídeos dos reels: só baixam quando a seção se aproxima e só tocam quando
+   estão realmente na tela (os laterais esperam aparecer; no celular nem carregam) */
+new IntersectionObserver(([e]) => { rsNear = e.isIntersecting; updateReels(); }, { rootMargin: '300px 0px' }).observe($('#reels-show'));
 $('#lbClose').addEventListener('click', closeLb);
 $('#lbPrev').addEventListener('click', () => step(-1));
 $('#lbNext').addEventListener('click', () => step(1));
