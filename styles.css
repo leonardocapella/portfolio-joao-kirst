@@ -939,3 +939,25 @@ p  { color: var(--muted); line-height: 1.75; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   .reveal { opacity: 1; transform: none; }
 }
+
+/* ============================================================
+   CARDS DO PORTFÓLIO: imagens numa área própria, sem cobrir o texto
+============================================================ */
+.cat-num, .cat-card h3, .cat-card p, .cat-meta { position: relative; z-index: 2; }
+.cat-fan { z-index: 1; }
+.cat-card h3 { max-width: 50%; }
+.cat-card p  { max-width: 46%; }
+.cat-fan { left: 54%; right: 26px; width: auto; }
+.cat-fan.wide img { width: 96%; }
+
+@media (max-width: 960px) {
+  .cat-card { min-height: 0; }
+  .cat-card h3, .cat-card p { max-width: 100%; }
+  .cat-fan { position: relative; inset: auto; left: auto; right: auto; width: 100%; max-width: 420px; height: 240px; margin: 22px auto 26px; }
+  .cat-fan img { right: 24%; width: 46%; }
+  /* manuais e mockups (imagens deitadas): empilhados dentro da própria área */
+  .cat-fan.wide img { right: 16%; width: 64%; }
+  .cat-fan.wide img:nth-child(1) { transform: translate(calc(-12% - 4% * var(--f)), calc(-70% - 3% * var(--f))) rotate(calc(-5deg - 2deg * var(--f))) scale(0.8); }
+  .cat-fan.wide img:nth-child(2) { transform: translate(-4%, -50%) rotate(-1deg) scale(0.88); }
+  .cat-fan.wide img:nth-child(3) { transform: translate(calc(6% + 4% * var(--f)), calc(-30% + 3% * var(--f))) rotate(calc(4deg + 2deg * var(--f))) scale(0.92); }
+}
