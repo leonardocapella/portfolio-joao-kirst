@@ -244,7 +244,7 @@ p  { color: var(--muted); line-height: 1.75; }
 /* ============================================================
    HERO (expande com o scroll)
 ============================================================ */
-#hero { position: relative; height: 230vh; height: 230svh; }
+#hero { position: relative; height: 170vh; height: 170svh; }
 .hero-stage {
   position: sticky; top: 0;
   height: 100vh; height: 100svh;

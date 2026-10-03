@@ -241,7 +241,9 @@ function measure() {
   M.max = document.documentElement.scrollHeight - vh;
   M.heroH = hero.offsetHeight;
   // janela inicial do hero
-  M.t0 = mob ? clamp(vh * 0.6, 390, 460) : clamp(vh * 0.52, 360, 440);
+  // a janela começa sempre logo abaixo do botão do topo (em qualquer altura de tela)
+  const copyBottom = heroCopy.offsetTop + heroCopy.offsetHeight + (mob ? 22 : 32);
+  M.t0 = Math.max(copyBottom, mob ? vh * 0.42 : vh * 0.48);
   M.w0 = mob ? vw - 32 : Math.min(1040, vw - 48);
   M.procTop = docTop(processEl); M.procH = processEl.offsetHeight;
   M.steps = steps.map(docTop);
@@ -269,10 +271,11 @@ function onScroll() {
   // HERO: a janela (clip-path) abre até a tela cheia; as imagens não mudam de tamanho
   if (y < M.heroH) {
     const p = clamp(y / ((M.heroH - vh) * 0.85));
-    const top = M.t0 * (1 - p), side = ((vw - M.w0) / 2) * (1 - p), rad = (22 * (1 - p)).toFixed(1);
-    set('hm', heroMedia, 'clipPath', `inset(${top.toFixed(1)}px ${side.toFixed(1)}px 0px round ${rad}px ${rad}px 0px 0px)`);
+    // recorte retangular (sem cantos arredondados): o navegador processa bem mais rápido
+    const top = M.t0 * (1 - p), side = ((vw - M.w0) / 2) * (1 - p);
+    set('hm', heroMedia, 'clipPath', `inset(${top.toFixed(1)}px ${side.toFixed(1)}px 0px)`);
     set('hc', heroCopy, 'transform', `translate3d(0,${(p * -70).toFixed(1)}px,0)`);
-    set('hco', heroCopy, 'opacity', clamp(1 - p * 1.8).toFixed(3));
+    set('hco', heroCopy, 'opacity', clamp(1 - p * 2.6).toFixed(3));
     set('cue', heroCue, 'opacity', clamp(1 - p * 3).toFixed(3));
     set('cap', hmCaption, 'opacity', clamp((p - 0.6) * 2.5).toFixed(3));
     set('capt', hmCaption, 'transform', `translate3d(0,${((1 - p) * 30).toFixed(1)}px,0)`);
