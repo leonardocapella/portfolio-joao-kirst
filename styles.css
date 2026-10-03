@@ -602,7 +602,7 @@ p  { color: var(--muted); line-height: 1.75; }
   border: 1px solid var(--border);
   box-shadow: 0 40px 100px -40px var(--glow);
 }
-.sobre-photo img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 30%; }
+.sobre-photo img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 30%; }
 .sobre-photo::after { content: ""; position: absolute; inset: 55% 0 0; background: linear-gradient(transparent, rgba(7, 5, 12, 0.9)); }
 .sobre-caption { position: absolute; left: 24px; bottom: 22px; z-index: 1; font-size: 0.85rem; color: var(--muted); }
 .sobre-caption strong { display: block; font-family: var(--ff-display); font-weight: 400; font-size: 1.6rem; color: #fff; line-height: 1.1; }
@@ -764,27 +764,48 @@ p  { color: var(--muted); line-height: 1.75; }
 .marquee-shift { will-change: transform; }
 
 /* --- Feed horizontal --- */
-.hscroll { position: relative; height: 300vh; background: var(--bg); }
+.hscroll { position: relative; background: var(--bg); }
 .hs-stage {
-  position: sticky; top: 0;
-  height: 100vh; height: 100svh;
-  overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center;
-  gap: clamp(18px, 4vh, 40px);
-  padding-top: var(--nav-h);
+  display: flex; flex-direction: column;
+  gap: 12px;
+  padding: 100px 0 90px;
   background:
     radial-gradient(ellipse 70% 50% at 50% 100%, rgba(139, 61, 255, 0.18), transparent 70%),
     linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 48px 48px,
     linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 48px 48px,
     var(--bg);
 }
+.hs-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .hs-head h2 { font-size: clamp(2rem, 4.6vw, 3.6rem); }
+.hs-arrows { display: flex; gap: 10px; flex: none; }
+.hs-arrow {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--border);
+  background: rgba(20, 14, 32, 0.6);
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+}
+.hs-arrow:hover { background: var(--accent); border-color: var(--accent); }
+.hs-arrow:disabled { opacity: 0.3; pointer-events: none; }
+/* faixa que rola na horizontal (dedo, trackpad, mouse arrastando ou setas) */
+.hs-scroller {
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  cursor: grab;
+}
+.hs-scroller::-webkit-scrollbar { display: none; }
+.hs-scroller.dragging { cursor: grabbing; scroll-snap-type: none; }
+.hs-scroller.dragging .hs-item { pointer-events: none; }
 .hs-track {
   display: flex; gap: 22px;
   width: max-content;
-  padding: 0 max(24px, calc((100vw - 1200px) / 2 + 24px));
-  will-change: transform;
+  padding: 44px max(24px, calc((100vw - 1200px) / 2 + 24px));
 }
+.hs-item { scroll-snap-align: center; }
+.hs-item img { -webkit-user-drag: none; user-select: none; }
 .hs-item {
   position: relative;
   flex: none;
@@ -863,6 +884,9 @@ p  { color: var(--muted); line-height: 1.75; }
 @media (max-width: 760px) {
   .rs-side { display: none; }
   .hs-item { height: min(48vh, 420px); }
+  .hs-arrows { display: none; }
+  /* foto do Sobre: quadrada e inteira no celular (a original é quadrada) */
+  .sobre-photo img { aspect-ratio: 1 / 1; object-position: 50% 40%; }
   .hs-track { gap: 14px; }
 }
 

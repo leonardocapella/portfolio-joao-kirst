@@ -203,10 +203,16 @@
     <section id="feed" class="hscroll">
       <div class="hs-stage">
         <div class="hs-head container">
-          <span class="kicker">Rola que tem mais</span>
-          <h2>Um feed inteiro de <span class="mark-wrap"><span class="mark">marcas diferentes</span></span>.</h2>
+          <div>
+            <span class="kicker">Arraste para o lado →</span>
+            <h2>Um feed inteiro de <span class="mark-wrap"><span class="mark">marcas diferentes</span></span>.</h2>
+          </div>
+          <div class="hs-arrows">
+            <button class="hs-arrow" id="hsPrev" aria-label="Voltar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+            <button class="hs-arrow" id="hsNext" aria-label="Avançar"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+          </div>
         </div>
-        <div class="hs-track" id="hsTrack"></div>
+        <div class="hs-scroller" id="hsScroller"><div class="hs-track" id="hsTrack"></div></div>
         <div class="hs-bar container" aria-hidden="true"><span id="hsBar"></span></div>
       </div>
     </section>

@@ -88,7 +88,6 @@ const waFloat = $('#waFloat');
 const processEl = $('#process');
 const processFill = $('#processFill');
 const steps = $$('.step');
-const feed = $('#feed');
 const hsBar = $('#hsBar');
 const rshow = $('#reels-show');
 const rsStage = $('#rsStage');
@@ -141,7 +140,8 @@ const spFx = spEls.map(el => {
     return { el, fn: sp => {
       const i = k(sp);
       el.style.transform = `translate3d(0,${((1 - i) * 50).toFixed(1)}px,0) scale(${(0.9 + 0.1 * i).toFixed(4)})`;
-      img.style.transform = `scale(${(1.28 - 0.22 * i).toFixed(4)}) translate3d(0,${((sp - 0.5) * -36).toFixed(1)}px,0)`;
+      // no celular a foto fica inteira, sem zoom; no desktop mantém o leve zoom-out
+      img.style.transform = M.vw <= 760 ? 'none' : `scale(${(1.28 - 0.22 * i).toFixed(4)}) translate3d(0,${((sp - 0.5) * -36).toFixed(1)}px,0)`;
     } };
   }
   if (el.classList.contains('numeros')) {
@@ -161,6 +161,64 @@ const spFx = spEls.map(el => {
 
 let ticking = false;
 let last = {};
+
+/* ------------------------------------------------------------
+   Feed: faixa horizontal independente do scroll da página.
+   Dedo/trackpad rolam nativamente; no mouse dá para arrastar; setas avançam.
+------------------------------------------------------------ */
+const hsScroller = $('#hsScroller');
+const hsPrev = $('#hsPrev'), hsNext = $('#hsNext');
+let feedTick = false;
+function updateFeed() {
+  feedTick = false;
+  if (!M.hsItems) return;
+  const sl = hsScroller.scrollLeft, w = hsScroller.clientWidth;
+  const max = hsScroller.scrollWidth - w;
+  set('hsb', hsBar, 'transform', `scaleX(${max > 0 ? (sl / max).toFixed(4) : 0})`);
+  hsPrev.disabled = sl < 4;
+  hsNext.disabled = sl > max - 4;
+  M.hsItems.forEach(([cx, el], i) => {
+    const c = (cx - sl) / w - 0.5; // -0.5 (esquerda) a 0.5 (direita)
+    if (c < -1 || c > 1) return;
+    set('hi' + i, el, 'transform', `translate3d(0,${(Math.abs(c) * 50 * (i % 2 ? 1 : -1)).toFixed(1)}px,0) rotate(${(c * -4).toFixed(2)}deg)`);
+    set('hp' + i, el.firstElementChild, 'transform', `scale(1.06) translate3d(${(c * -30).toFixed(1)}px,0,0)`);
+  });
+}
+hsScroller.addEventListener('scroll', () => { if (!feedTick) { feedTick = true; requestAnimationFrame(updateFeed); } }, { passive: true });
+const feedStep = d => hsScroller.scrollBy({ left: d * hsScroller.clientWidth * 0.7, behavior: 'smooth' });
+hsPrev.addEventListener('click', () => feedStep(-1));
+hsNext.addEventListener('click', () => feedStep(1));
+
+// arrastar com o mouse (com um pouco de inércia ao soltar)
+let drag = null;
+hsScroller.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse' || e.button !== 0) return;
+  drag = { x: e.clientX, sl: hsScroller.scrollLeft, moved: false, vx: 0, lx: e.clientX, lt: performance.now() };
+});
+addEventListener('pointermove', e => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x;
+  if (!drag.moved && Math.abs(dx) > 5) { drag.moved = true; hsScroller.classList.add('dragging'); }
+  if (!drag.moved) return;
+  const now = performance.now();
+  drag.vx = (e.clientX - drag.lx) / Math.max(1, now - drag.lt);
+  drag.lx = e.clientX; drag.lt = now;
+  hsScroller.scrollLeft = drag.sl - dx;
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  const { moved } = drag;
+  let v = drag.vx * 16;
+  drag = null;
+  if (!moved) return;
+  hsScroller.classList.remove('dragging');
+  (function glide() {
+    if (Math.abs(v) < 0.5 || drag) return;
+    hsScroller.scrollLeft -= v; v *= 0.92;
+    requestAnimationFrame(glide);
+  })();
+});
+
 let rsNear = false, rsP = 0, scrolling = false, idleT;
 const rsVids = [[rsMain, 'main'], [rsL, 'side'], [rsR, 'side']].map(([el, k]) => [$('video', el), k]);
 function updateReels() {
@@ -188,9 +246,8 @@ function measure() {
   M.procTop = docTop(processEl); M.procH = processEl.offsetHeight;
   M.steps = steps.map(docTop);
   M.manTop = docTop(manifesto); M.manH = manifesto.offsetHeight;
-  M.feedTop = docTop(feed); M.feedH = feed.offsetHeight;
-  M.hsDist = Math.max(0, hsTrack.scrollWidth - vw);
   M.hsItems = hsItems.map(el => [el.offsetLeft + el.offsetWidth / 2, el]);
+  updateFeed();
   M.rsTop = docTop(rshow); M.rsH = rshow.offsetHeight;
   M.rsT0 = mob ? clamp(vh * 0.28, 190, 250) : clamp(vh * 0.32, 200, 290);
   M.sp = spFx.map(f => [docTop(f.el), f.el.offsetHeight]);
@@ -234,20 +291,6 @@ function onScroll() {
   if (vis(M.manTop, M.manH, y)) {
     const lit = Math.round(clamp((vh * 0.85 - (M.manTop - y)) / (M.manH + vh * 0.35)) * words.length);
     if (last.lit !== lit) { last.lit = lit; words.forEach((w, i) => w.classList.toggle('on', i < lit)); }
-  }
-
-  // Feed horizontal: a rolagem vertical vira deslocamento lateral
-  if (vis(M.feedTop, M.feedH, y)) {
-    const fp = clamp((y - M.feedTop) / (M.feedH - vh));
-    const shift = fp * M.hsDist;
-    set('hs', hsTrack, 'transform', `translate3d(${(-shift).toFixed(1)}px,0,0)`);
-    set('hsb', hsBar, 'transform', `scaleX(${fp.toFixed(4)})`);
-    M.hsItems.forEach(([cx, el], i) => {
-      const c = (cx - shift) / vw - 0.5; // -0.5 (esquerda) a 0.5 (direita)
-      if (c < -1 || c > 1) return;
-      set('hi' + i, el, 'transform', `translate3d(0,${(Math.abs(c) * 50 * (i % 2 ? 1 : -1)).toFixed(1)}px,0) rotate(${(c * -4).toFixed(2)}deg)`);
-      set('hp' + i, el.firstElementChild, 'transform', `scale(1.06) translate3d(${(c * -30).toFixed(1)}px,0,0)`);
-    });
   }
 
   // Reels: celulares já estão no tamanho final; crescem por scale
