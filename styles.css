@@ -287,9 +287,9 @@ p  { color: var(--muted); line-height: 1.75; }
 /* retrato: preto e branco arroxeado; a lente revela a cor original */
 .hx-person {
   position: absolute; z-index: 2;
-  left: 50%; bottom: 0;
-  height: min(86%, 92vw);
-  aspect-ratio: 864 / 1000;
+  left: 50%; bottom: -5%;
+  height: min(80%, 84vw);
+  aspect-ratio: 864 / 620;
   transform: translateX(-50%);
 }
 .hx-person img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
@@ -305,7 +305,7 @@ p  { color: var(--muted); line-height: 1.75; }
 .hx-left {
   position: absolute; z-index: 3;
   left: clamp(16px, 4vw, 48px); bottom: clamp(24px, 6vh, 56px);
-  width: min(29vw, 400px);
+  width: min(27vw, 380px);
 }
 .hx-avail {
   display: inline-flex; align-items: center; gap: 9px;
@@ -680,7 +680,7 @@ p  { color: var(--muted); line-height: 1.75; }
 /* ============================================================
    04 · SOBRE
 ============================================================ */
-.sobre-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 72px; align-items: center; }
+.sobre-grid { max-width: 860px; }
 .sobre-photo {
   position: relative;
   border-radius: 24px;
