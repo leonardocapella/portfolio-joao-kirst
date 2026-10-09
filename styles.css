@@ -288,8 +288,8 @@ p  { color: var(--muted); line-height: 1.75; }
 .hx-person {
   position: absolute; z-index: 2;
   left: 50%; bottom: -5%;
-  height: min(80%, 84vw);
-  aspect-ratio: 864 / 620;
+  height: min(77%, 62vw);
+  aspect-ratio: 1070 / 1000;
   transform: translateX(-50%);
 }
 .hx-person img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
@@ -383,8 +383,8 @@ p  { color: var(--muted); line-height: 1.75; }
   .hx-name .o { -webkit-text-stroke-width: 1.4px; }
   .hx-person {
     position: relative; left: auto; bottom: auto;
-    height: 35vh; height: 35svh;
-    margin: -22px auto 0;
+    height: 36vh; height: 36svh;
+    margin: -34px auto 0;
   }
   .hx-person img {
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent);
