@@ -124,7 +124,25 @@ const M = {};
 const marqueeEl = $('.marquee');
 const heroCopy = $('.hero-copy');
 const heroMedia = $('.hero-media');
-const heroCue = $('.hero-cue');
+const hxName = $('#hxName');
+const hxNameIn = $('.hx-name-in');
+// nome gigante: cada letra numa máscara própria, para subir em cascata
+let chI = 0;
+(function splitChars(node) {
+  [...node.childNodes].forEach(ch => {
+    if (ch.nodeType !== 3) return splitChars(ch);
+    const frag = document.createDocumentFragment();
+    [...ch.textContent].forEach(c => {
+      if (c === ' ') return frag.append(' ');
+      const s = document.createElement('span');
+      s.className = 'ch';
+      s.style.setProperty('--d', (0.35 + chI++ * 0.06).toFixed(3) + 's');
+      s.textContent = c;
+      frag.append(s);
+    });
+    ch.replaceWith(frag);
+  });
+})(hxNameIn);
 const hmCaption = $('.hm-caption');
 const rsCopy = $('.rs-copy');
 const rsEnd = $('.rs-end');
@@ -240,10 +258,12 @@ function measure() {
   M.vw = vw; M.vh = vh;
   M.max = document.documentElement.scrollHeight - vh;
   M.heroH = hero.offsetHeight;
-  // janela inicial do hero
-  // a janela começa sempre logo abaixo do botão do topo (em qualquer altura de tela)
-  const copyBottom = heroCopy.offsetTop + heroCopy.offsetHeight + (mob ? 22 : 32);
-  M.t0 = Math.max(copyBottom, mob ? vh * 0.42 : vh * 0.48);
+  // nome gigante: ocupa a largura toda, sem passar de 30% da altura da tela
+  const gut = parseFloat(getComputedStyle(heroCopy).paddingLeft);
+  hxName.style.fontSize = '100px';
+  hxName.style.fontSize = Math.min((vw - gut * 2) / hxNameIn.offsetWidth * 100, vh * 0.3).toFixed(1) + 'px';
+  // janela do hero: nasce escondida embaixo e sobe cobrindo a tela
+  M.t0 = vh;
   M.w0 = mob ? vw - 32 : Math.min(1040, vw - 48);
   M.procTop = docTop(processEl); M.procH = processEl.offsetHeight;
   M.steps = steps.map(docTop);
@@ -274,9 +294,8 @@ function onScroll() {
     // recorte retangular (sem cantos arredondados): o navegador processa bem mais rápido
     const top = M.t0 * (1 - p), side = ((vw - M.w0) / 2) * (1 - p);
     set('hm', heroMedia, 'clipPath', `inset(${top.toFixed(1)}px ${side.toFixed(1)}px 0px)`);
-    set('hc', heroCopy, 'transform', `translate3d(0,${(p * -70).toFixed(1)}px,0)`);
-    set('hco', heroCopy, 'opacity', clamp(1 - p * 2.6).toFixed(3));
-    set('cue', heroCue, 'opacity', clamp(1 - p * 3).toFixed(3));
+    set('hc', heroCopy, 'transform', `translate3d(0,${(p * -120).toFixed(1)}px,0) scale(${(1 - p * 0.08).toFixed(4)})`);
+    set('hco', heroCopy, 'opacity', clamp(1 - p * 1.25).toFixed(3));
     set('cap', hmCaption, 'opacity', clamp((p - 0.6) * 2.5).toFixed(3));
     set('capt', hmCaption, 'transform', `translate3d(0,${((1 - p) * 30).toFixed(1)}px,0)`);
     heroStage.classList.toggle('moving', p > 0.02);
@@ -348,6 +367,31 @@ addEventListener('resize', remeasure);
 new ResizeObserver(remeasure).observe(document.body);
 if (document.fonts) document.fonts.ready.then(measure);
 measure();
+
+/* ============================================================
+   ENTRADA do hero + lente que revela a foto colorida
+============================================================ */
+const root = document.documentElement;
+requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('hero-in')));
+
+const hxPerson = $('#hxPerson');
+const hxColor = $('.hx-color');
+if (!reduced && matchMedia('(hover: hover)').matches) {
+  let lensR = 0, lensTo = 0, lensRaf = 0;
+  const grow = () => {
+    lensR += (lensTo - lensR) * 0.18;
+    hxColor.style.setProperty('--r', lensR.toFixed(1) + 'px');
+    lensRaf = Math.abs(lensTo - lensR) > 0.5 ? requestAnimationFrame(grow) : 0;
+  };
+  const aim = to => { lensTo = to; if (!lensRaf) lensRaf = requestAnimationFrame(grow); };
+  hxPerson.addEventListener('pointermove', e => {
+    const r = hxPerson.getBoundingClientRect();
+    hxColor.style.setProperty('--mx', (e.clientX - r.left).toFixed(0) + 'px');
+    hxColor.style.setProperty('--my', (e.clientY - r.top).toFixed(0) + 'px');
+    aim(Math.max(70, r.width * 0.2));
+  });
+  hxPerson.addEventListener('pointerleave', () => aim(0));
+}
 
 /* ============================================================
    REVEAL + CONTADORES
