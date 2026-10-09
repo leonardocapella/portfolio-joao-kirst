@@ -261,7 +261,7 @@ function measure() {
   // nome gigante: ocupa a largura toda, sem passar de 30% da altura da tela
   const gut = parseFloat(getComputedStyle(heroCopy).paddingLeft);
   hxName.style.fontSize = '100px';
-  hxName.style.fontSize = Math.min((vw - gut * 2) / hxNameIn.offsetWidth * 100, vh * 0.3).toFixed(1) + 'px';
+  hxName.style.fontSize = Math.min((vw - gut * 2) / hxNameIn.offsetWidth * 100, vh * 0.24).toFixed(1) + 'px';
   // janela do hero: nasce escondida embaixo e sobe cobrindo a tela
   M.t0 = vh;
   M.w0 = mob ? vw - 32 : Math.min(1040, vw - 48);
@@ -376,7 +376,8 @@ requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('hero
 
 const hxPerson = $('#hxPerson');
 const hxColor = $('.hx-color');
-if (!reduced && matchMedia('(hover: hover)').matches) {
+// funciona em qualquer computador com mouse (não depende das configurações de animação do sistema)
+if (matchMedia('(any-hover: hover), (any-pointer: fine)').matches) {
   let lensR = 0, lensTo = 0, lensRaf = 0;
   const grow = () => {
     lensR += (lensTo - lensR) * 0.18;
@@ -388,7 +389,7 @@ if (!reduced && matchMedia('(hover: hover)').matches) {
     const r = hxPerson.getBoundingClientRect();
     hxColor.style.setProperty('--mx', (e.clientX - r.left).toFixed(0) + 'px');
     hxColor.style.setProperty('--my', (e.clientY - r.top).toFixed(0) + 'px');
-    aim(Math.max(70, r.width * 0.2));
+    aim(Math.max(140, r.width * 0.3));
   });
   hxPerson.addEventListener('pointerleave', () => aim(0));
 }

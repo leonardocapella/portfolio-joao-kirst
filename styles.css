@@ -287,17 +287,18 @@ p  { color: var(--muted); line-height: 1.75; }
 /* retrato: preto e branco arroxeado; a lente revela a cor original */
 .hx-person {
   position: absolute; z-index: 2;
-  left: 50%; bottom: -5%;
-  height: min(77%, 62vw);
+  left: 50%; bottom: -3%;
+  height: min(92%, 76vw);
   aspect-ratio: 1070 / 1000;
   transform: translateX(-50%);
 }
 .hx-person img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: bottom; }
-.hx-mono { filter: drop-shadow(0 0 40px rgba(139, 61, 255, 0.35)); }
+/* a base do busto se dissolve no fundo (máscara no contêiner, separada da lente) */
+.hx-person { -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 98%); mask-image: linear-gradient(180deg, #000 74%, transparent 98%); }
 .hx-color {
   --mx: 50%; --my: 30%; --r: 0px;
-  -webkit-mask-image: radial-gradient(circle var(--r) at var(--mx) var(--my), #000 70%, transparent 100%);
-  mask-image: radial-gradient(circle var(--r) at var(--mx) var(--my), #000 70%, transparent 100%);
+  -webkit-mask-image: radial-gradient(circle var(--r) at var(--mx) var(--my), #000 40%, transparent 100%);
+  mask-image: radial-gradient(circle var(--r) at var(--mx) var(--my), #000 40%, transparent 100%);
   pointer-events: none;
 }
 
@@ -305,7 +306,8 @@ p  { color: var(--muted); line-height: 1.75; }
 .hx-left {
   position: absolute; z-index: 3;
   left: clamp(16px, 4vw, 48px); bottom: clamp(24px, 6vh, 56px);
-  width: min(31vw, 430px);
+  width: min(25vw, 350px);
+  text-shadow: 0 2px 18px rgba(7, 5, 12, 0.6);
 }
 .hx-avail {
   display: inline-flex; align-items: center; gap: 9px;
@@ -317,7 +319,7 @@ p  { color: var(--muted); line-height: 1.75; }
 }
 .hx-avail i { width: 7px; height: 7px; border-radius: 50%; background: #3BE38B; animation: pulse 2.2s ease-out infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59, 227, 139, 0.55); } 70%, 100% { box-shadow: 0 0 0 9px rgba(59, 227, 139, 0); } }
-.hero-title { font-size: clamp(1.6rem, min(2.5vw, 4.4vh), 2.5rem); line-height: 1.08; }
+.hero-title { font-size: clamp(1.4rem, min(2.1vw, 3.9vh), 2.15rem); line-height: 1.08; }
 .hero-title .l2 { color: #D9C2FF; }
 .hx-mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.04em; }
 .hx-mask > span { display: inline-block; }
@@ -383,8 +385,8 @@ p  { color: var(--muted); line-height: 1.75; }
   .hx-name .o { -webkit-text-stroke-width: 1.4px; }
   .hx-person {
     position: relative; left: auto; bottom: auto;
-    height: 36vh; height: 36svh;
-    margin: -34px auto 0;
+    height: 40vh; height: 40svh;
+    margin: -40px auto 0;
   }
   .hx-person img {
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent);
@@ -1052,7 +1054,6 @@ p  { color: var(--muted); line-height: 1.75; }
   .cat-fan.wide img:nth-child(3) { transform: translate(calc(6% + 4% * var(--f)), calc(-30% + 3% * var(--f))) rotate(calc(4deg + 2deg * var(--f))) scale(0.92); }
 }
 
-@media (hover: none) { .hx-color { display: none; } }
 @media (max-width: 760px) and (max-height: 700px) {
   .hx-person { height: 29vh; height: 29svh; }
   .hx-avail { margin-bottom: 8px; }
